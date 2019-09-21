@@ -31,7 +31,7 @@ bot.on('message', (ctx) => {
     const { message_id, text = '', chat } = ctx.update.message;
     if(text.match(MUSIC_PATTERN)) {
         api.resolveTrack(text).then(track => {
-            utils.relatedTracks(track.id, (error, response, body) => {
+            api.relatedTracks(track.id, (error, response, body) => {
                 if (!recommendations[chat.id]) {
                     console.log('start');
                     config[chat.id] = {delay: 6 * MINUTES_IN_HOUR}
