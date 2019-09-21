@@ -1,63 +1,58 @@
 const Telegraf = require('telegraf');
-const Telegram = require('telegraf/telegram');
-const telegram = new Telegram('917613190:AAHNw25POV1u1e008GssH4vthUxaR22efSs');
 const bot = new Telegraf('917613190:AAHNw25POV1u1e008GssH4vthUxaR22efSs');
-const SoundCloud = require('soundcloud-api-client');
-
-const client_id = 'q2iUepUBTAabXdJFYY7vjaGn6yno13KB';
-
-const limit = 1;
-
-const request = require('request');
-const options = {
-    url: 'https://api-v2.soundcloud.com/tracks/682020566/related?client_id=q2iUepUBTAabXdJFYY7vjaGn6yno13KB&limit=1&offset=0&linked_partitioning=1&app_version=1568973862&app_locale=en',
-    headers: {
-        'User-Agent': 'request'
-    }
-};
-
-function callback(error, response, body) {
-    if (!error && response.statusCode == 200) {
-        const { collection = [] } = JSON.parse(body);
-        console.log(collection.map(item => item.title));
-    }
-}
-
-// request(options, callback);
-
-const nextSong = {
-
-};
-
-const soundcloud = new SoundCloud({ client_id });
-
-
-var url = 'https://soundcloud.com/djangodjango/first-light';
-soundcloud.get('/resolve', { url }).then(track => {
-    console.log(track.id)
-});
-
+const api = require('./api');
+const commandArgsMiddleware = require('./commandArgs')
 
 const MUSIC_PATTERN = /^http.*soundcloud\.com(\/[\d\w-?=&]+)+/;
+const MINUTES_IN_HOUR = 60 * 60 * 1000;
+const recommendations = {};
+const config = {};
 
-// bot.on('message', (ctx) => {
-//     const { message_id, text = '', chat } = ctx.update.message;
-//     if(text.match(MUSIC_PATTERN)) {
-//         console.log(text);
-//
-//         soundcloud.get('/resolve', { text }, function(track) {
-//             console.log(track.id);
-//         });
+bot.use(commandArgsMiddleware());
 
-        // const reqeustOptions = {
-        //     url: text + '/related?client_id=' + client_id + '&limit=' + limit + '&offset=0&linked_partitioning=1&app_version=1568973862&app_locale=en',
-        //     headers: { 'User-Agent': 'request' }
-        // };
-        //
-        // request(options, (error, response, body) => {
-        //     console.log(JSON.parse(body));
-        // });
-    // };
-// });
+bot.command('interval', (ctx) => {
+    const { chat: { id } } = ctx.update.message;
+    var interval;
+    try {
+        interval = parseInt(ctx.state.command.args[0]);
+    } catch (e) {
+        ctx.reply('Інтервал повинен бути в межах [1-12]');
+        return;
+    }
+    if(interval < 1 || interval > 12) {
+        ctx.reply('Інтервал повинен бути в межах [1-12]');
+        return;
+    }
+    config[id] = { delay: interval * MINUTES_IN_HOUR };
+    ctx.reply('Інтервал між рекомендаціями тепер ' + interval + ' годин');
+})
 
-// bot.startPolling();
+bot.on('message', (ctx) => {
+    const { message_id, text = '', chat } = ctx.update.message;
+    if(text.match(MUSIC_PATTERN)) {
+        api.resolveTrack(text).then(track => {
+            utils.relatedTracks(track.id, (error, response, body) => {
+                if (!recommendations[chat.id]) {
+                    console.log('start');
+                    config[chat.id] = {delay: 6 * MINUTES_IN_HOUR}
+                    showNextRecommendation(chat.id, (nextSong) => {
+                        console.log('next ' + nextSong);
+                        ctx.reply(nextSong)
+                    });
+                }
+                recommendations[chat.id] = JSON.parse(body).collection.map(i => i.permalink_url);
+            });
+        });
+    };
+});
+
+const showNextRecommendation = function(chatId, showAction, delay) {
+    setTimeout(() => {
+        console.log('check ' + chatId);
+        const nextSong = recommendations[chatId].shift();
+        nextSong && showAction(nextSong);
+        showNextRecommendation(chatId, showAction);
+        }, config[chatId].delay);
+}
+
+bot.startPolling();

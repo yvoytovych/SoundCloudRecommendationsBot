@@ -1,0 +1,23 @@
+{
+  "name": "soundcloudbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "soundcloud": "^3.3.2",
+    "soundcloud-api-client": "0.0.9",
+    "soundcloud-audio": "^1.4.0",
+    "soundcloud-nodejs-api-wrapper": "^0.3.2",
+    "telegraf": "^3.32.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.6.0",
+    "@babel/preset-env": "^7.6.0",
+    "@babel/register": "^7.6.0"
+  }
+}
