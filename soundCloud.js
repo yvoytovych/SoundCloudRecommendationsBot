@@ -10,21 +10,40 @@ const config = {};
 
 bot.use(commandArgsMiddleware());
 
-bot.command('interval', (ctx) => {
+bot.command('time', (ctx) => {
     const { chat: { id } } = ctx.update.message;
     var interval;
     try {
         interval = parseInt(ctx.state.command.args[0]);
     } catch (e) {
-        ctx.reply('Інтервал повинен бути в межах [1-12]');
+        ctx.reply('Should be in [1-12]');
         return;
     }
     if(interval < 1 || interval > 12) {
-        ctx.reply('Інтервал повинен бути в межах [1-12]');
+        ctx.reply('Should be in [1-12]');
         return;
     }
-    config[id] = { delay: interval * MINUTES_IN_HOUR };
-    ctx.reply('Інтервал між рекомендаціями тепер ' + interval + ' годин');
+    config[id] = { ...config[id], delay: interval * MINUTES_IN_HOUR };
+    ctx.reply('Time between recommendations set for ' + interval + (interval === 1 ? 'hour' : ' hours'));
+})
+
+bot.command('stop', (ctx) => {
+    const { chat: { id } } = ctx.update.message;
+    config[id] = { ...config[id], stop: true };
+    console.log('stop ' + id);
+    ctx.reply('stopped');
+})
+
+bot.command('start', (ctx) => {
+    const { chat: { id } } = ctx.update.message;
+    console.log('start ' + id);
+    ctx.reply('ok');
+    config[id] = { ...config[id], delay: 6 * MINUTES_IN_HOUR, stop: false };
+    recommendations[id] = [];
+    showNextRecommendation(id, (nextSong) => {
+        console.log('next ' + nextSong);
+        ctx.reply(nextSong);
+    });
 })
 
 bot.on('message', (ctx) => {
@@ -32,27 +51,27 @@ bot.on('message', (ctx) => {
     if(text.match(MUSIC_PATTERN)) {
         api.resolveTrack(text).then(track => {
             api.relatedTracks(track.id, (error, response, body) => {
-                if (!recommendations[chat.id]) {
-                    console.log('start');
-                    config[chat.id] = {delay: 6 * MINUTES_IN_HOUR}
-                    showNextRecommendation(chat.id, (nextSong) => {
-                        console.log('next ' + nextSong);
-                        ctx.reply(nextSong)
-                    });
-                }
                 recommendations[chat.id] = JSON.parse(body).collection.map(i => i.permalink_url);
             });
         });
     };
 });
 
-const showNextRecommendation = function(chatId, showAction, delay) {
+const showNextRecommendation = function(chatId, showAction) {
+    const { delay, stop } = config[chatId];
     setTimeout(() => {
+        if(stop) return;
+        const now = new Date(new Date().toLocaleString({ timeZone: "Europe/Kiev" }));
         console.log('check ' + chatId);
-        const nextSong = recommendations[chatId].shift();
-        nextSong && showAction(nextSong);
+        if (9 < now.getHours() && now.getHours() < 17) {
+            const nextSong = recommendations[chatId].shift();
+            nextSong && showAction(nextSong);
+        } else {
+            console.log('sleep at night');
+        }
         showNextRecommendation(chatId, showAction);
-        }, config[chatId].delay);
+        },
+    delay);
 }
 
 bot.startPolling();
