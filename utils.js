@@ -10,6 +10,7 @@ module.exports = {
     },
 
     getTomorrow9Am: function () {
+        const now = new Date(new Date().toLocaleString({ timeZone: "Europe/Kiev" }));
         const tomorrow9AM = new Date(now.getTime());
         tomorrow9AM.setDate(now.getDate() + 1);
         tomorrow9AM.setHours(9);
