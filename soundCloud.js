@@ -28,7 +28,7 @@ bot.command('limit', (ctx) => {
         return ctx.reply('давай нормально [1-100]');
     }
     config[id] = { ...config[id], limit };
-    ctx.reply('Тепер стягуєм рекомендацій: ' + limit);
+    ctx.reply('Тепер рекомендацій: ' + limit);
 });
 
 bot.command('stop', (ctx) => {
@@ -85,7 +85,7 @@ const showNextRecommendation = function(chatId, delay = 5000) {
             console.log('sleep ' + name);
             return showNextRecommendation(chatId);
         }
-        console.log('check ' + name, next.time ? utils.msToTime(next.time - now) : '');
+        console.log('check ' + name + ' ' + next.time ? utils.msToTime(next.time - now) : '');
         if (next.time && (next.time - now) < 0) {
             const recommendation = recommendations.shift();
             if (recommendation) {
