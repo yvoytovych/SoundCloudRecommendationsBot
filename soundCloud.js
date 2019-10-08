@@ -7,6 +7,15 @@ const commandArgsMiddleware = require('./commandArgs');
 const MUSIC_PATTERN = /^http.*soundcloud\.com(\/[\d\w-?=&]+)+/;
 const config = {};
 
+console.logCopy = console.log.bind(console);
+
+console.log = function(data)
+{
+    var options = { dateStyle: 'short', timeStyle: 'short'};
+    var currentDate = '[' + new Date().toLocaleString({ timeZone: "Europe/Kiev" }, options) + '] ';
+    this.logCopy(currentDate, data);
+};
+
 bot.use(commandArgsMiddleware());
 
 bot.command('limit', (ctx) => {
@@ -25,24 +34,25 @@ bot.command('limit', (ctx) => {
 bot.command('stop', (ctx) => {
     const { chat: { id } } = ctx.update.message;
     config[id] = { ...config[id], run: false };
-    console.log('stop ' + id);
-    return ctx.reply('астанавітєсь');
+    console.log('stop ' + config[id].name);
+    return ctx.reply('ок');
 });
 
 bot.command('start', (ctx) => {
-    const { chat: { id } } = ctx.update.message;
-    if (config[id] && config[id].run) {
+    const { chat } = ctx.update.message;
+    if (config[chat.id] && config[chat.id].run) {
         return ctx.reply('x2 швидше не буде');
     }
-    config[id] = {
-        recommendations: config[id] && config[id].recommendations || [],
+    config[chat.id] = {
+        recommendations: config[chat.id] && config[chat.id].recommendations || [],
         run: true,
-        next: config[id] && config[id].next || {},
-        ctx: ctx
+        next: config[chat.id] && config[chat.id].next || {},
+        ctx: ctx,
+        name: chat.title || chat.first_name + ' ' + chat.last_name
     };
-    console.log('start ' + id);
+    console.log('start ' + config[chat.id].name);
     ctx.reply('палітєлі');
-    showNextRecommendation(id);
+    showNextRecommendation(chat.id);
 });
 
 bot.on('message', (ctx) => {
@@ -52,14 +62,15 @@ bot.on('message', (ctx) => {
     if(text.match(MUSIC_PATTERN)) {
         api.resolveTrack(text).then(track => {
             api.relatedTracks(track.id, config[chat.id].limit, (error, response, body) => {
-                console.log(track);
                 const now = new Date(new Date().toLocaleString({ timeZone: "Europe/Kiev" }));
                 config[chat.id].recommendations = JSON.parse(body).collection.map(i => {
                     return { link: i.permalink_url, duration: i.duration };
                 });
                 config[chat.id].next = { time: new Date(now.getTime() + track.duration )};
-                ctx.reply('ок поки слухаєм цю ~' + utils.msToTime(track.duration));
-                console.log('recommendations ' + chat.id + ' = ' + config[chat.id].recommendations.length);
+                if (config[chat.id].run) {
+                    ctx.reply('ок поки слухаєм цю ~' + utils.msToTime(track.duration));
+                }
+                console.log('recommendations ' + config[chat.id].name + ' = ' + config[chat.id].recommendations.length);
             });
         });
     }
@@ -67,14 +78,14 @@ bot.on('message', (ctx) => {
 
 const showNextRecommendation = function(chatId, delay = 5000) {
     setTimeout(() => {
-        const { next = {}, recommendations, run, ctx } = config[chatId];
+        const { next = {}, recommendations, run, ctx, name } = config[chatId];
         if(!run) return;
         const now = new Date(new Date().toLocaleString({ timeZone: "Europe/Kiev" }));
-        console.log('check ' + chatId);
         if (now.getHours() < 9 || 19 < now.getHours()) {
-            console.log('scheduling for tomorrow');
-            return showNextRecommendation(chatId, utils.getTomorrow9Am() - now);
+            console.log('sleep ' + name);
+            return showNextRecommendation(chatId);
         }
+        console.log('check ' + name, next.time ? utils.msToTime(next.time - now) : '');
         if (next.time && (next.time - now) < 0) {
             const recommendation = recommendations.shift();
             if (recommendation) {
