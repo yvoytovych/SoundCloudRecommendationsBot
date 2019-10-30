@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "request": "^2.88.0",
     "soundcloud": "^3.3.2",
     "soundcloud-api-client": "0.0.9",
     "soundcloud-audio": "^1.4.0",
