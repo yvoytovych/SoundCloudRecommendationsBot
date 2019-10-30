@@ -84,9 +84,10 @@ bot.on('message', ctx => {
                         return { link: i.permalink_url, duration: i.duration };
                     });
                     if (config[chat.id].recommendations.length) {
-                        config[chat.id].next = new Date().getTime() + track.duration;
+                        config[chat.id].next = new Date().getTime() + 5000;
                     }
                     console.log('recommendations', name , config[chat.id].recommendations.length);
+                    showNextRecommendation(chat.id);
                 });
             });
         } catch (e) {
@@ -102,27 +103,30 @@ const showNextRecommendation = (chatId, delay = 5000) => {
         const { next, recommendations, run, ctx, name } = config[chatId];
         if(!run) return;
         const now = new Date().getTime();
-        console.log('check', name, (next ? (next - now) : ''));
-        if (next && (next - now) < 0) {
-            const recommendation = recommendations.shift();
-            if (recommendation) {
-                console.log('recommendations', name, recommendations.length);
-                ctx.reply(recommendation.link);
-                api.resolveTrack(recommendation.link).then(track => {
-                    api.downloadTrack(track.stream_url).then(res => {
-                        ctx.replyWithAudio({ source: Buffer.from(res, 'utf8') }, getTrackInfo(track));
+        if(next) {
+            if ((next - now) < 0) {
+                const recommendation = recommendations.shift();
+                if (recommendation) {
+                    console.log('recommendations', name, recommendations.length);
+                    ctx.reply(recommendation.link);
+                    api.resolveTrack(recommendation.link).then(track => {
+                        api.downloadTrack(track.stream_url).then(res => {
+                            ctx.replyWithAudio({ source: Buffer.from(res, 'utf8') }, getTrackInfo(track));
+                        });
                     });
-                });
-                if (recommendations.length) {
-                    config[chatId].next = now + recommendation.duration;
-                } else {
-                    config[chatId].next = false;
+                    if (recommendations.length) {
+                        config[chatId].next = now + 5000;
+                        showNextRecommendation(chatId)
+                    } else {
+                        return;
+                    }
                 }
+
             }
+            showNextRecommendation(chatId);
         }
-        showNextRecommendation(chatId)
-        },
-        delay);
+    },
+    delay);
 };
 
 bot.launch();
