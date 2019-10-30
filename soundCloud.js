@@ -26,7 +26,7 @@ bot.command('limit', ctx => {
     if(limit < 1 || limit > 100) {
         return ctx.reply('Do it nice [1-100]');
     }
-    config[id] = { ...config[id], limit: limit + 1 };
+    config[id] = { ...config[id], limit };
     ctx.reply('Ok!');
 });
 
@@ -83,7 +83,9 @@ bot.on('message', ctx => {
                     config[chat.id].recommendations = JSON.parse(res).collection.map(i => {
                         return { link: i.permalink_url, duration: i.duration };
                     });
-                    config[chat.id].next = new Date().getTime() + track.duration;
+                    if (config[chat.id].recommendations.length) {
+                        config[chat.id].next = new Date().getTime() + track.duration;
+                    }
                     console.log('recommendations', name , config[chat.id].recommendations.length);
                 });
             });
