@@ -84,7 +84,7 @@ bot.on('message', ctx => {
                         return { link: i.permalink_url, duration: i.duration };
                     });
                     if (config[chat.id].recommendations.length) {
-                        config[chat.id].next = new Date().getTime() + 5000;
+                        config[chat.id].next = new Date().getTime() + track.duration;
                     }
                     console.log('recommendations', name , config[chat.id].recommendations.length);
                     showNextRecommendation(chat.id);
@@ -115,7 +115,7 @@ const showNextRecommendation = (chatId, delay = 5000) => {
                         });
                     });
                     if (recommendations.length) {
-                        config[chatId].next = now + 5000;
+                        config[chatId].next = now + recommendation.duration;
                         showNextRecommendation(chatId)
                     } else {
                         return;
